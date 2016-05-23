@@ -5,10 +5,10 @@
   <description></description>
   <enabled>true</enabled>
   <lastModified>
-    <time>1462914710117</time>
+    <time>1463754478996</time>
     <timezone>America/New_York</timezone>
   </lastModified>
-  <revision>77</revision>
+  <revision>145</revision>
   <sourceConnector version="3.4.0">
     <metaDataId>0</metaDataId>
     <name>sourceConnector</name>
@@ -361,48 +361,65 @@ TExFTnwxOTk1MDUwMTEyMDEK</inboundTemplate>
             <sequenceNumber>0</sequenceNumber>
             <name>XML to JSON</name>
             <script>importPackage(Packages.ca.uhn.hl7v2.parser);
-importPackage(Packages.com.phdcc.homehealth);
-importPackage(Packages.ca.uhn.hl7v2.model.v251.message);
 
+importPackage(Packages.ca.uhn.hl7v2.model.v251.message);
+var newmsg = CompactHL7XML();
 var json = &quot;&quot;;
-var hl7XML = new java.lang.String(msg.toString());
+var hl7XML = new java.lang.String(newmsg.toString());
 channelMap.put(&apos;oldxml&apos;, hl7XML);
 var mcf = new Packages.ca.uhn.hl7v2.parser.CanonicalModelClassFactory($(&apos;version&apos;));
 var parser = new Packages.ca.uhn.hl7v2.parser.PipeParser( mcf );
+parser.setValidationContext(null);
 
 var ADTA01msg = new ADT_A01( mcf ); // 2.5.1
 ADTA01msg = parser.parse($(&apos;hl7&apos;));
 
-hl7XML = HL7XMLReplace(ADTA01msg.getMSH().getNames(), hl7XML, &quot;MSH&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getSFT().getNames(), hl7XML, &quot;SFT&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getEVN().getNames(), hl7XML, &quot;EVN&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getPID().getNames(), hl7XML, &quot;PID&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getPD1().getNames(), hl7XML, &quot;PD1&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getROL().getNames(), hl7XML, &quot;ROL&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getNK1().getNames(), hl7XML, &quot;NK1&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getPV1().getNames(), hl7XML, &quot;PV1&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getPV2().getNames(), hl7XML, &quot;PV2&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getAL1().getNames(), hl7XML, &quot;AL1&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getDB1().getNames(), hl7XML, &quot;DB1&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getDRG().getNames(), hl7XML, &quot;DRG&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getACC().getNames(), hl7XML, &quot;ACC&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getPDA().getNames(), hl7XML, &quot;PDA&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getDG1().getNames(), hl7XML, &quot;DG1&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getGT1().getNames(), hl7XML, &quot;GT1&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getGT1().getNames(), hl7XML, &quot;MRG&quot;);
+hl7XML = ReplaceSegments(ADTA01msg);
 
 // only need to do this once for N insurances
-hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN1().getNames(), hl7XML, &quot;IN1&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN2().getNames(), hl7XML, &quot;IN2&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN3().getNames(), hl7XML, &quot;IN3&quot;);
+if (msg.elements(&quot;IN1&quot;).length() &gt; 0) 
+	hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN1().getNames(), hl7XML, &quot;IN1&quot;);
+if (msg.elements(&quot;IN2&quot;).length() &gt; 0) 
+	hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN2().getNames(), hl7XML, &quot;IN2&quot;);
+if (msg.elements(&quot;IN3&quot;).length() &gt; 0) 
+	hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN3().getNames(), hl7XML, &quot;IN3&quot;);
 	         
 channelMap.put(&apos;newxml&apos;, XmlUtil.prettyPrint(hl7XML));
 
+
+for (var element in msg.MSH) {
+	logger.info(&apos;element &apos; + element);
+}
+
+
 var json = XMLtoJSON(hl7XML);
+var jsonstr = new java.lang.String(json).replaceAll(&quot;\n&quot;, &quot;&quot;);
+channelMap.put(&apos;json&apos;, jsonstr);
 
-channelMap.put(&apos;json&apos;, json);
 
 
+function ReplaceSegments( ADTA01msg ) {
+	var names = ADTA01msg.getNames();
+	for (var i = 0; i &lt; names.length ; i++ ) {
+		var segment = names[i];
+		if (msg.elements(names[i]).length() &gt; 0) 
+			hl7XML = HL7XMLReplace(ADTA01msg.get(names[i]).getNames(), hl7XML, names[i]);
+	}
+	return hl7XML;
+
+}
+
+function CheckSegment( names, segment) {
+	for (var i = 0; i &lt; names.length ; i++ ) {
+		if (names[i] = segment) {
+			
+			logger.info (&apos;segment exists &apos; + segment);
+			return true;
+		}
+	
+	}
+	return false;
+}
 
 function HL7XMLReplace( names, hl7XML, segment) {
 	for (var i = names.length-1; i &gt;= 0; i-- ) {
@@ -414,59 +431,96 @@ function HL7XMLReplace( names, hl7XML, segment) {
 
 function XMLtoJSON(hl7XML) {
 
-importPackage(Packages.org.json);
-var xmlJSONObj = Packages.org.json.XML.toJSONObject(hl7XML);
-var PRETTY_PRINT_INDENT_FACTOR = 4;
-return xmlJSONObj.toString(PRETTY_PRINT_INDENT_FACTOR);
+	importPackage(Packages.org.json);
+	var xmlJSONObj = Packages.org.json.XML.toJSONObject(hl7XML);
+	var PRETTY_PRINT_INDENT_FACTOR = 4;
+	channelMap.put(&apos;xmlJSONObj&apos;, xmlJSONObj);
+	return xmlJSONObj.toString(PRETTY_PRINT_INDENT_FACTOR);
   
+}
+
+
+
+function CompactHL7XML() {
+	var newmsg = msg;
+	
+	for each (segment in msg.children()) {
+		var segname = segment.name();
+		for each (field in msg[segname].children()) {
+			delete newmsg[segname][field.name()];
+			for each (component in field.children()) {
+				var fieldxml = new XML(&quot;&lt;&quot; + field.name() + &quot;&gt;&quot; + XmlUtil.encode(component) + &quot;&lt;/&quot; + field.name() + &quot;&gt;&quot;);
+				newmsg[segname].appendChild(fieldxml);
+			}
+		}
+	}
+	
+	return newmsg;
 }</script>
             <type>JavaScript</type>
             <data>
               <entry>
                 <string>Script</string>
                 <string>importPackage(Packages.ca.uhn.hl7v2.parser);
-importPackage(Packages.com.phdcc.homehealth);
-importPackage(Packages.ca.uhn.hl7v2.model.v251.message);
 
+importPackage(Packages.ca.uhn.hl7v2.model.v251.message);
+var newmsg = CompactHL7XML();
 var json = &quot;&quot;;
-var hl7XML = new java.lang.String(msg.toString());
+var hl7XML = new java.lang.String(newmsg.toString());
 channelMap.put(&apos;oldxml&apos;, hl7XML);
 var mcf = new Packages.ca.uhn.hl7v2.parser.CanonicalModelClassFactory($(&apos;version&apos;));
 var parser = new Packages.ca.uhn.hl7v2.parser.PipeParser( mcf );
+parser.setValidationContext(null);
 
 var ADTA01msg = new ADT_A01( mcf ); // 2.5.1
 ADTA01msg = parser.parse($(&apos;hl7&apos;));
 
-hl7XML = HL7XMLReplace(ADTA01msg.getMSH().getNames(), hl7XML, &quot;MSH&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getSFT().getNames(), hl7XML, &quot;SFT&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getEVN().getNames(), hl7XML, &quot;EVN&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getPID().getNames(), hl7XML, &quot;PID&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getPD1().getNames(), hl7XML, &quot;PD1&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getROL().getNames(), hl7XML, &quot;ROL&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getNK1().getNames(), hl7XML, &quot;NK1&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getPV1().getNames(), hl7XML, &quot;PV1&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getPV2().getNames(), hl7XML, &quot;PV2&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getAL1().getNames(), hl7XML, &quot;AL1&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getDB1().getNames(), hl7XML, &quot;DB1&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getDRG().getNames(), hl7XML, &quot;DRG&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getACC().getNames(), hl7XML, &quot;ACC&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getPDA().getNames(), hl7XML, &quot;PDA&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getDG1().getNames(), hl7XML, &quot;DG1&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getGT1().getNames(), hl7XML, &quot;GT1&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getGT1().getNames(), hl7XML, &quot;MRG&quot;);
+hl7XML = ReplaceSegments(ADTA01msg);
 
 // only need to do this once for N insurances
-hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN1().getNames(), hl7XML, &quot;IN1&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN2().getNames(), hl7XML, &quot;IN2&quot;);
-hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN3().getNames(), hl7XML, &quot;IN3&quot;);
+if (msg.elements(&quot;IN1&quot;).length() &gt; 0) 
+	hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN1().getNames(), hl7XML, &quot;IN1&quot;);
+if (msg.elements(&quot;IN2&quot;).length() &gt; 0) 
+	hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN2().getNames(), hl7XML, &quot;IN2&quot;);
+if (msg.elements(&quot;IN3&quot;).length() &gt; 0) 
+	hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN3().getNames(), hl7XML, &quot;IN3&quot;);
 	         
 channelMap.put(&apos;newxml&apos;, XmlUtil.prettyPrint(hl7XML));
 
+
+for (var element in msg.MSH) {
+	logger.info(&apos;element &apos; + element);
+}
+
+
 var json = XMLtoJSON(hl7XML);
+var jsonstr = new java.lang.String(json).replaceAll(&quot;\n&quot;, &quot;&quot;);
+channelMap.put(&apos;json&apos;, jsonstr);
 
-channelMap.put(&apos;json&apos;, json);
 
 
+function ReplaceSegments( ADTA01msg ) {
+	var names = ADTA01msg.getNames();
+	for (var i = 0; i &lt; names.length ; i++ ) {
+		var segment = names[i];
+		if (msg.elements(names[i]).length() &gt; 0) 
+			hl7XML = HL7XMLReplace(ADTA01msg.get(names[i]).getNames(), hl7XML, names[i]);
+	}
+	return hl7XML;
+
+}
+
+function CheckSegment( names, segment) {
+	for (var i = 0; i &lt; names.length ; i++ ) {
+		if (names[i] = segment) {
+			
+			logger.info (&apos;segment exists &apos; + segment);
+			return true;
+		}
+	
+	}
+	return false;
+}
 
 function HL7XMLReplace( names, hl7XML, segment) {
 	for (var i = names.length-1; i &gt;= 0; i-- ) {
@@ -478,11 +532,31 @@ function HL7XMLReplace( names, hl7XML, segment) {
 
 function XMLtoJSON(hl7XML) {
 
-importPackage(Packages.org.json);
-var xmlJSONObj = Packages.org.json.XML.toJSONObject(hl7XML);
-var PRETTY_PRINT_INDENT_FACTOR = 4;
-return xmlJSONObj.toString(PRETTY_PRINT_INDENT_FACTOR);
+	importPackage(Packages.org.json);
+	var xmlJSONObj = Packages.org.json.XML.toJSONObject(hl7XML);
+	var PRETTY_PRINT_INDENT_FACTOR = 4;
+	channelMap.put(&apos;xmlJSONObj&apos;, xmlJSONObj);
+	return xmlJSONObj.toString(PRETTY_PRINT_INDENT_FACTOR);
   
+}
+
+
+
+function CompactHL7XML() {
+	var newmsg = msg;
+	
+	for each (segment in msg.children()) {
+		var segname = segment.name();
+		for each (field in msg[segname].children()) {
+			delete newmsg[segname][field.name()];
+			for each (component in field.children()) {
+				var fieldxml = new XML(&quot;&lt;&quot; + field.name() + &quot;&gt;&quot; + XmlUtil.encode(component) + &quot;&lt;/&quot; + field.name() + &quot;&gt;&quot;);
+				newmsg[segname].appendChild(fieldxml);
+			}
+		}
+	}
+	
+	return newmsg;
 }</string>
               </entry>
             </data>
@@ -491,56 +565,28 @@ return xmlJSONObj.toString(PRETTY_PRINT_INDENT_FACTOR);
             <sequenceNumber>1</sequenceNumber>
             <name>Code backup</name>
             <script>//importPackage(Packages.ca.uhn.hl7v2.parser);
-//importPackage(Packages.com.phdcc.homehealth);
+//
 //importPackage(Packages.ca.uhn.hl7v2.model.v251.message);
 //
 //var json = &quot;&quot;;
 //var hl7XML = new java.lang.String(msg.toString());
-//channelMap.put(&apos;xml&apos;, hl7XML);
+//channelMap.put(&apos;oldxml&apos;, hl7XML);
 //var mcf = new Packages.ca.uhn.hl7v2.parser.CanonicalModelClassFactory($(&apos;version&apos;));
-//channelMap.put(&apos;mcf&apos;, mcf);
-//
 //var parser = new Packages.ca.uhn.hl7v2.parser.PipeParser( mcf );
+//parser.setValidationContext(null);
 //
-//channelMap.put(&apos;parser&apos;, parser);
-//// skipping steps to normalize it into ver 2.5 and ADT 
-//
-//var ADTA01msg = new ADT_A01( mcf ); //(ca.uhn.hl7v2.model.v25.message.ORU_R01) parser.parse(v23message);
-//channelMap.put(&apos;ADTA01msgfirst&apos;, ADTA01msg);		  
+//var ADTA01msg = new ADT_A01( mcf ); // 2.5.1
 //ADTA01msg = parser.parse($(&apos;hl7&apos;));
 //
-//channelMap.put(&apos;ADTA01msgsecond&apos;, ADTA01msg);
-//
-//channelMap.put(&apos;ADTA01msgsecondMSH&apos;, ADTA01msg.getMSH());
-//channelMap.put(&apos;ADTA01msgsecondMSHnames&apos;, ADTA01msg.getMSH().getNames());
-//
-////var ADTA01msgsecondMSHnames = ADTA01msg.getMSH().getNames();
-//
-////hl7XML = Packages.com.phdcc.homehealth.Hapi.HL7XMLReplace($(&apos;ADTA01msgsecondMSHnames&apos;), hl7XML, &quot;MSH&quot;);
-//
-//hl7XML = HL7XMLReplace(ADTA01msg.getMSH().getNames(), hl7XML, &quot;MSH&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getSFT().getNames(), hl7XML, &quot;SFT&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getEVN().getNames(), hl7XML, &quot;EVN&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getPID().getNames(), hl7XML, &quot;PID&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getPD1().getNames(), hl7XML, &quot;PD1&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getROL().getNames(), hl7XML, &quot;ROL&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getNK1().getNames(), hl7XML, &quot;NK1&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getPV1().getNames(), hl7XML, &quot;PV1&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getPV2().getNames(), hl7XML, &quot;PV2&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getAL1().getNames(), hl7XML, &quot;AL1&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getDB1().getNames(), hl7XML, &quot;DB1&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getDRG().getNames(), hl7XML, &quot;DRG&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getACC().getNames(), hl7XML, &quot;ACC&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getPDA().getNames(), hl7XML, &quot;PDA&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getDG1().getNames(), hl7XML, &quot;DG1&quot;);
-////hl7XML = HL7XMLReplace(msg.getPR1().getNames(), hl7XML, &quot;PR1&quot;);
-//
-//hl7XML = HL7XMLReplace(ADTA01msg.getGT1().getNames(), hl7XML, &quot;GT1&quot;);
+//hl7XML = ReplaceSegments(ADTA01msg);
 //
 //// only need to do this once for N insurances
-//hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN1().getNames(), hl7XML, &quot;IN1&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN2().getNames(), hl7XML, &quot;IN2&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN3().getNames(), hl7XML, &quot;IN3&quot;);
+//if (msg.elements(&quot;IN1&quot;).length() &gt; 0) 
+//	hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN1().getNames(), hl7XML, &quot;IN1&quot;);
+//if (msg.elements(&quot;IN2&quot;).length() &gt; 0) 
+//	hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN2().getNames(), hl7XML, &quot;IN2&quot;);
+//if (msg.elements(&quot;IN3&quot;).length() &gt; 0) 
+//	hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN3().getNames(), hl7XML, &quot;IN3&quot;);
 //	         
 //channelMap.put(&apos;newxml&apos;, XmlUtil.prettyPrint(hl7XML));
 //
@@ -549,6 +595,29 @@ return xmlJSONObj.toString(PRETTY_PRINT_INDENT_FACTOR);
 //channelMap.put(&apos;json&apos;, json);
 //
 //
+//
+//function ReplaceSegments( ADTA01msg ) {
+//	var names = ADTA01msg.getNames();
+//	for (var i = 0; i &lt; names.length ; i++ ) {
+//		var segment = names[i];
+//		if (msg.elements(names[i]).length() &gt; 0) 
+//			hl7XML = HL7XMLReplace(ADTA01msg.get(names[i]).getNames(), hl7XML, names[i]);
+//	}
+//	return hl7XML;
+//
+//}
+//
+//function CheckSegment( names, segment) {
+//	for (var i = 0; i &lt; names.length ; i++ ) {
+//		if (names[i] = segment) {
+//			
+//			logger.info (&apos;segment exists &apos; + segment);
+//			return true;
+//		}
+//	
+//	}
+//	return false;
+//}
 //
 //function HL7XMLReplace( names, hl7XML, segment) {
 //	for (var i = names.length-1; i &gt;= 0; i-- ) {
@@ -563,6 +632,7 @@ return xmlJSONObj.toString(PRETTY_PRINT_INDENT_FACTOR);
 //importPackage(Packages.org.json);
 //var xmlJSONObj = Packages.org.json.XML.toJSONObject(hl7XML);
 //var PRETTY_PRINT_INDENT_FACTOR = 4;
+//channelMap.put(&apos;xmlJSONObj&apos;, xmlJSONObj);
 //return xmlJSONObj.toString(PRETTY_PRINT_INDENT_FACTOR);
 //  
 //}</script>
@@ -571,56 +641,28 @@ return xmlJSONObj.toString(PRETTY_PRINT_INDENT_FACTOR);
               <entry>
                 <string>Script</string>
                 <string>//importPackage(Packages.ca.uhn.hl7v2.parser);
-//importPackage(Packages.com.phdcc.homehealth);
+//
 //importPackage(Packages.ca.uhn.hl7v2.model.v251.message);
 //
 //var json = &quot;&quot;;
 //var hl7XML = new java.lang.String(msg.toString());
-//channelMap.put(&apos;xml&apos;, hl7XML);
+//channelMap.put(&apos;oldxml&apos;, hl7XML);
 //var mcf = new Packages.ca.uhn.hl7v2.parser.CanonicalModelClassFactory($(&apos;version&apos;));
-//channelMap.put(&apos;mcf&apos;, mcf);
-//
 //var parser = new Packages.ca.uhn.hl7v2.parser.PipeParser( mcf );
+//parser.setValidationContext(null);
 //
-//channelMap.put(&apos;parser&apos;, parser);
-//// skipping steps to normalize it into ver 2.5 and ADT 
-//
-//var ADTA01msg = new ADT_A01( mcf ); //(ca.uhn.hl7v2.model.v25.message.ORU_R01) parser.parse(v23message);
-//channelMap.put(&apos;ADTA01msgfirst&apos;, ADTA01msg);		  
+//var ADTA01msg = new ADT_A01( mcf ); // 2.5.1
 //ADTA01msg = parser.parse($(&apos;hl7&apos;));
 //
-//channelMap.put(&apos;ADTA01msgsecond&apos;, ADTA01msg);
-//
-//channelMap.put(&apos;ADTA01msgsecondMSH&apos;, ADTA01msg.getMSH());
-//channelMap.put(&apos;ADTA01msgsecondMSHnames&apos;, ADTA01msg.getMSH().getNames());
-//
-////var ADTA01msgsecondMSHnames = ADTA01msg.getMSH().getNames();
-//
-////hl7XML = Packages.com.phdcc.homehealth.Hapi.HL7XMLReplace($(&apos;ADTA01msgsecondMSHnames&apos;), hl7XML, &quot;MSH&quot;);
-//
-//hl7XML = HL7XMLReplace(ADTA01msg.getMSH().getNames(), hl7XML, &quot;MSH&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getSFT().getNames(), hl7XML, &quot;SFT&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getEVN().getNames(), hl7XML, &quot;EVN&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getPID().getNames(), hl7XML, &quot;PID&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getPD1().getNames(), hl7XML, &quot;PD1&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getROL().getNames(), hl7XML, &quot;ROL&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getNK1().getNames(), hl7XML, &quot;NK1&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getPV1().getNames(), hl7XML, &quot;PV1&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getPV2().getNames(), hl7XML, &quot;PV2&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getAL1().getNames(), hl7XML, &quot;AL1&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getDB1().getNames(), hl7XML, &quot;DB1&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getDRG().getNames(), hl7XML, &quot;DRG&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getACC().getNames(), hl7XML, &quot;ACC&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getPDA().getNames(), hl7XML, &quot;PDA&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getDG1().getNames(), hl7XML, &quot;DG1&quot;);
-////hl7XML = HL7XMLReplace(msg.getPR1().getNames(), hl7XML, &quot;PR1&quot;);
-//
-//hl7XML = HL7XMLReplace(ADTA01msg.getGT1().getNames(), hl7XML, &quot;GT1&quot;);
+//hl7XML = ReplaceSegments(ADTA01msg);
 //
 //// only need to do this once for N insurances
-//hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN1().getNames(), hl7XML, &quot;IN1&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN2().getNames(), hl7XML, &quot;IN2&quot;);
-//hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN3().getNames(), hl7XML, &quot;IN3&quot;);
+//if (msg.elements(&quot;IN1&quot;).length() &gt; 0) 
+//	hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN1().getNames(), hl7XML, &quot;IN1&quot;);
+//if (msg.elements(&quot;IN2&quot;).length() &gt; 0) 
+//	hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN2().getNames(), hl7XML, &quot;IN2&quot;);
+//if (msg.elements(&quot;IN3&quot;).length() &gt; 0) 
+//	hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN3().getNames(), hl7XML, &quot;IN3&quot;);
 //	         
 //channelMap.put(&apos;newxml&apos;, XmlUtil.prettyPrint(hl7XML));
 //
@@ -629,6 +671,29 @@ return xmlJSONObj.toString(PRETTY_PRINT_INDENT_FACTOR);
 //channelMap.put(&apos;json&apos;, json);
 //
 //
+//
+//function ReplaceSegments( ADTA01msg ) {
+//	var names = ADTA01msg.getNames();
+//	for (var i = 0; i &lt; names.length ; i++ ) {
+//		var segment = names[i];
+//		if (msg.elements(names[i]).length() &gt; 0) 
+//			hl7XML = HL7XMLReplace(ADTA01msg.get(names[i]).getNames(), hl7XML, names[i]);
+//	}
+//	return hl7XML;
+//
+//}
+//
+//function CheckSegment( names, segment) {
+//	for (var i = 0; i &lt; names.length ; i++ ) {
+//		if (names[i] = segment) {
+//			
+//			logger.info (&apos;segment exists &apos; + segment);
+//			return true;
+//		}
+//	
+//	}
+//	return false;
+//}
 //
 //function HL7XMLReplace( names, hl7XML, segment) {
 //	for (var i = names.length-1; i &gt;= 0; i-- ) {
@@ -643,9 +708,52 @@ return xmlJSONObj.toString(PRETTY_PRINT_INDENT_FACTOR);
 //importPackage(Packages.org.json);
 //var xmlJSONObj = Packages.org.json.XML.toJSONObject(hl7XML);
 //var PRETTY_PRINT_INDENT_FACTOR = 4;
+//channelMap.put(&apos;xmlJSONObj&apos;, xmlJSONObj);
 //return xmlJSONObj.toString(PRETTY_PRINT_INDENT_FACTOR);
 //  
 //}</string>
+              </entry>
+            </data>
+          </step>
+          <step>
+            <sequenceNumber>2</sequenceNumber>
+            <name>Test</name>
+            <script>function CompactHL7XML() {
+	var newmsg = msg;
+	
+	for each (segment in msg.children()) {
+		var segname = segment.name();
+		for each (field in msg[segname].children()) {
+			delete newmsg[segname][field.name()];
+			for each (component in field.children()) {
+				var fieldxml = new XML(&quot;&lt;&quot; + field.name() + &quot;&gt;&quot; + XmlUtil.encode(component) + &quot;&lt;/&quot; + field.name() + &quot;&gt;&quot;);
+				newmsg[segname].appendChild(fieldxml);
+			}
+		}
+	}
+	
+	return newmsg;
+}</script>
+            <type>JavaScript</type>
+            <data>
+              <entry>
+                <string>Script</string>
+                <string>function CompactHL7XML() {
+	var newmsg = msg;
+	
+	for each (segment in msg.children()) {
+		var segname = segment.name();
+		for each (field in msg[segname].children()) {
+			delete newmsg[segname][field.name()];
+			for each (component in field.children()) {
+				var fieldxml = new XML(&quot;&lt;&quot; + field.name() + &quot;&gt;&quot; + XmlUtil.encode(component) + &quot;&lt;/&quot; + field.name() + &quot;&gt;&quot;);
+				newmsg[segname].appendChild(fieldxml);
+			}
+		}
+	}
+	
+	return newmsg;
+}</string>
               </entry>
             </data>
           </step>
