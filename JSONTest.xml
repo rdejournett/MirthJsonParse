@@ -5,10 +5,10 @@
   <description></description>
   <enabled>true</enabled>
   <lastModified>
-    <time>1463754478996</time>
+    <time>1464195229429</time>
     <timezone>America/New_York</timezone>
   </lastModified>
-  <revision>145</revision>
+  <revision>146</revision>
   <sourceConnector version="3.4.0">
     <metaDataId>0</metaDataId>
     <name>sourceConnector</name>
@@ -361,40 +361,46 @@ TExFTnwxOTk1MDUwMTEyMDEK</inboundTemplate>
             <sequenceNumber>0</sequenceNumber>
             <name>XML to JSON</name>
             <script>importPackage(Packages.ca.uhn.hl7v2.parser);
-
 importPackage(Packages.ca.uhn.hl7v2.model.v251.message);
-var newmsg = CompactHL7XML();
-var json = &quot;&quot;;
-var hl7XML = new java.lang.String(newmsg.toString());
-channelMap.put(&apos;oldxml&apos;, hl7XML);
-var mcf = new Packages.ca.uhn.hl7v2.parser.CanonicalModelClassFactory($(&apos;version&apos;));
-var parser = new Packages.ca.uhn.hl7v2.parser.PipeParser( mcf );
-parser.setValidationContext(null);
 
-var ADTA01msg = new ADT_A01( mcf ); // 2.5.1
-ADTA01msg = parser.parse($(&apos;hl7&apos;));
-
-hl7XML = ReplaceSegments(ADTA01msg);
-
-// only need to do this once for N insurances
-if (msg.elements(&quot;IN1&quot;).length() &gt; 0) 
-	hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN1().getNames(), hl7XML, &quot;IN1&quot;);
-if (msg.elements(&quot;IN2&quot;).length() &gt; 0) 
-	hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN2().getNames(), hl7XML, &quot;IN2&quot;);
-if (msg.elements(&quot;IN3&quot;).length() &gt; 0) 
-	hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN3().getNames(), hl7XML, &quot;IN3&quot;);
-	         
-channelMap.put(&apos;newxml&apos;, XmlUtil.prettyPrint(hl7XML));
-
-
-for (var element in msg.MSH) {
-	logger.info(&apos;element &apos; + element);
+try {
+	var newmsg = CompactHL7XML();
+	var json = &quot;&quot;;
+	var hl7XML = new java.lang.String(newmsg.toString());
+	channelMap.put(&apos;oldxml&apos;, hl7XML);
+	var mcf = new Packages.ca.uhn.hl7v2.parser.CanonicalModelClassFactory($(&apos;version&apos;));
+	var parser = new Packages.ca.uhn.hl7v2.parser.PipeParser( mcf );
+	parser.setValidationContext(null);
+	
+	var ADTA01msg = new ADT_A01( mcf ); // 2.5.1
+	ADTA01msg = parser.parse($(&apos;hl7&apos;));
+	
+	hl7XML = ReplaceSegments(ADTA01msg);
+	
+	// only need to do this once for N insurances
+	if (msg.elements(&quot;IN1&quot;).length() &gt; 0) 
+		hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN1().getNames(), hl7XML, &quot;IN1&quot;);
+	if (msg.elements(&quot;IN2&quot;).length() &gt; 0) 
+		hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN2().getNames(), hl7XML, &quot;IN2&quot;);
+	if (msg.elements(&quot;IN3&quot;).length() &gt; 0) 
+		hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN3().getNames(), hl7XML, &quot;IN3&quot;);
+		         
+	channelMap.put(&apos;newxml&apos;, XmlUtil.prettyPrint(hl7XML));
+	
+	
+	for (var element in msg.MSH) {
+		logger.info(&apos;element &apos; + element);
+	}
+	
+	
+	var json = XMLtoJSON(hl7XML);
+	var jsonstr = new java.lang.String(json).replaceAll(&quot;\n&quot;, &quot;&quot;);
+	channelMap.put(&apos;json&apos;, jsonstr);
+} catch (err) {
+	var json = XMLtoJSON(msg);
+	var jsonstr = new java.lang.String(json).replaceAll(&quot;\n&quot;, &quot;&quot;);
+	channelMap.put(&apos;json&apos;, jsonstr);
 }
-
-
-var json = XMLtoJSON(hl7XML);
-var jsonstr = new java.lang.String(json).replaceAll(&quot;\n&quot;, &quot;&quot;);
-channelMap.put(&apos;json&apos;, jsonstr);
 
 
 
@@ -462,40 +468,46 @@ function CompactHL7XML() {
               <entry>
                 <string>Script</string>
                 <string>importPackage(Packages.ca.uhn.hl7v2.parser);
-
 importPackage(Packages.ca.uhn.hl7v2.model.v251.message);
-var newmsg = CompactHL7XML();
-var json = &quot;&quot;;
-var hl7XML = new java.lang.String(newmsg.toString());
-channelMap.put(&apos;oldxml&apos;, hl7XML);
-var mcf = new Packages.ca.uhn.hl7v2.parser.CanonicalModelClassFactory($(&apos;version&apos;));
-var parser = new Packages.ca.uhn.hl7v2.parser.PipeParser( mcf );
-parser.setValidationContext(null);
 
-var ADTA01msg = new ADT_A01( mcf ); // 2.5.1
-ADTA01msg = parser.parse($(&apos;hl7&apos;));
-
-hl7XML = ReplaceSegments(ADTA01msg);
-
-// only need to do this once for N insurances
-if (msg.elements(&quot;IN1&quot;).length() &gt; 0) 
-	hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN1().getNames(), hl7XML, &quot;IN1&quot;);
-if (msg.elements(&quot;IN2&quot;).length() &gt; 0) 
-	hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN2().getNames(), hl7XML, &quot;IN2&quot;);
-if (msg.elements(&quot;IN3&quot;).length() &gt; 0) 
-	hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN3().getNames(), hl7XML, &quot;IN3&quot;);
-	         
-channelMap.put(&apos;newxml&apos;, XmlUtil.prettyPrint(hl7XML));
-
-
-for (var element in msg.MSH) {
-	logger.info(&apos;element &apos; + element);
+try {
+	var newmsg = CompactHL7XML();
+	var json = &quot;&quot;;
+	var hl7XML = new java.lang.String(newmsg.toString());
+	channelMap.put(&apos;oldxml&apos;, hl7XML);
+	var mcf = new Packages.ca.uhn.hl7v2.parser.CanonicalModelClassFactory($(&apos;version&apos;));
+	var parser = new Packages.ca.uhn.hl7v2.parser.PipeParser( mcf );
+	parser.setValidationContext(null);
+	
+	var ADTA01msg = new ADT_A01( mcf ); // 2.5.1
+	ADTA01msg = parser.parse($(&apos;hl7&apos;));
+	
+	hl7XML = ReplaceSegments(ADTA01msg);
+	
+	// only need to do this once for N insurances
+	if (msg.elements(&quot;IN1&quot;).length() &gt; 0) 
+		hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN1().getNames(), hl7XML, &quot;IN1&quot;);
+	if (msg.elements(&quot;IN2&quot;).length() &gt; 0) 
+		hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN2().getNames(), hl7XML, &quot;IN2&quot;);
+	if (msg.elements(&quot;IN3&quot;).length() &gt; 0) 
+		hl7XML = HL7XMLReplace(ADTA01msg.getINSURANCE(0).getIN3().getNames(), hl7XML, &quot;IN3&quot;);
+		         
+	channelMap.put(&apos;newxml&apos;, XmlUtil.prettyPrint(hl7XML));
+	
+	
+	for (var element in msg.MSH) {
+		logger.info(&apos;element &apos; + element);
+	}
+	
+	
+	var json = XMLtoJSON(hl7XML);
+	var jsonstr = new java.lang.String(json).replaceAll(&quot;\n&quot;, &quot;&quot;);
+	channelMap.put(&apos;json&apos;, jsonstr);
+} catch (err) {
+	var json = XMLtoJSON(msg);
+	var jsonstr = new java.lang.String(json).replaceAll(&quot;\n&quot;, &quot;&quot;);
+	channelMap.put(&apos;json&apos;, jsonstr);
 }
-
-
-var json = XMLtoJSON(hl7XML);
-var jsonstr = new java.lang.String(json).replaceAll(&quot;\n&quot;, &quot;&quot;);
-channelMap.put(&apos;json&apos;, jsonstr);
 
 
 
